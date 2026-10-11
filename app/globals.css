@@ -1,0 +1,174 @@
+@import "tailwindcss";
+@config "../tailwind.config.ts";
+
+/*
+ * Quota design tokens — "the contractor's ledger"
+ *
+ * Palette drawn from the trade's own world:
+ *   blueprint navy  #1B2A41  primary surfaces, headings
+ *   paper           #FAFAF7  background (estimate-sheet paper)
+ *   ink             #2E3947  body text
+ *   ledger green    #1F7A4D  money in / paid
+ *   safety amber    #E8A020  the one signal color — CTAs, focus
+ *   stamp red       #C2452D  unpaid / destructive
+ */
+
+@layer base {
+  :root {
+    --background: 45 23% 97%;
+    --foreground: 214 21% 23%;
+    --card: 0 0% 100%;
+    --card-foreground: 214 21% 23%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 214 21% 23%;
+    --primary: 216 41% 18%;
+    --primary-foreground: 45 23% 97%;
+    --secondary: 216 25% 93%;
+    --secondary-foreground: 216 41% 18%;
+    --muted: 216 20% 93%;
+    --muted-foreground: 215 14% 42%;
+    --accent: 40 82% 52%;
+    --accent-foreground: 216 41% 14%;
+    --destructive: 9 63% 47%;
+    --destructive-foreground: 45 23% 97%;
+    --success: 150 60% 30%;
+    --success-foreground: 45 23% 97%;
+    --border: 216 18% 86%;
+    --input: 216 18% 82%;
+    --ring: 40 82% 45%;
+    --radius: 0.25rem;
+  }
+
+  .dark {
+    --background: 216 35% 10%;
+    --foreground: 45 20% 92%;
+    --card: 216 33% 13%;
+    --card-foreground: 45 20% 92%;
+    --popover: 216 33% 13%;
+    --popover-foreground: 45 20% 92%;
+    --primary: 45 23% 97%;
+    --primary-foreground: 216 41% 14%;
+    --secondary: 216 28% 20%;
+    --secondary-foreground: 45 20% 92%;
+    --muted: 216 28% 18%;
+    --muted-foreground: 215 15% 62%;
+    --accent: 40 82% 52%;
+    --accent-foreground: 216 41% 14%;
+    --destructive: 9 63% 52%;
+    --destructive-foreground: 45 20% 92%;
+    --success: 150 50% 40%;
+    --success-foreground: 216 41% 14%;
+    --border: 216 25% 24%;
+    --input: 216 25% 28%;
+    --ring: 40 82% 52%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply font-display tracking-tight;
+  }
+}
+
+@layer components {
+  /* Eyebrow label — small uppercase tag above headings */
+  .eyebrow {
+    @apply font-display text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground;
+  }
+
+  /*
+   * Stamp — the signature element. Status rendered like the rubber
+   * stamps on a paper invoice book: uppercase, letterspaced, boxed.
+   */
+  .stamp {
+    @apply inline-flex items-center border-2 px-2 py-0.5 font-display text-xs font-bold uppercase tracking-[0.14em];
+  }
+  .stamp-paid {
+    @apply border-success text-success;
+  }
+  .stamp-unpaid {
+    @apply border-destructive text-destructive;
+  }
+  .stamp-sent {
+    @apply border-primary text-primary;
+  }
+  .stamp-draft {
+    @apply border-muted-foreground/60 text-muted-foreground;
+  }
+  /* Big rotated PAID stamp for the quote sheet */
+  .stamp-large {
+    @apply rotate-[-4deg] border-4 px-4 py-1 text-xl;
+  }
+
+  /* Ledger numerals — money and document numbers always in mono */
+  .figure {
+    @apply font-mono tabular-nums;
+  }
+
+  /* Ruled ledger row */
+  .ledger-row {
+    @apply border-b border-dashed border-border/80 last:border-solid;
+  }
+}
+
+/* ── Landing motion: hero orchestration + scroll reveals ─────────── */
+
+/* Ruled ledger paper: faint horizontal lines, no images */
+.ledger-paper {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent,
+    transparent 27px,
+    hsl(var(--primary) / 0.04) 27px,
+    hsl(var(--primary) / 0.04) 28px
+  );
+}
+
+/* Line items ink in (hero + voice mock) */
+@keyframes ink-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.hero-ink {
+  opacity: 0;
+  animation: ink-in 0.45s cubic-bezier(0.215, 0.61, 0.355, 1) forwards;
+}
+
+/* The signature: PAID stamp slams down and settles */
+@keyframes stamp-slam {
+  0%   { opacity: 0; transform: scale(1.6) rotate(-4deg); }
+  70%  { opacity: 1; transform: scale(0.95) rotate(-4deg); }
+  100% { opacity: 1; transform: scale(1) rotate(-4deg); }
+}
+.hero-stamp-slam {
+  opacity: 0;
+  will-change: transform;
+  animation: stamp-slam 0.4s cubic-bezier(0.19, 1, 0.22, 1) 0.9s forwards;
+}
+
+/* Card takes the hit: 1px sympathetic dip timed with the stamp landing */
+@keyframes card-dip {
+  0%, 70% { transform: translateY(0); }
+  80%     { transform: translateY(1px); }
+  100%    { transform: translateY(0); }
+}
+.hero-card-dip {
+  animation: card-dip 1.4s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-ink,
+  .hero-stamp-slam,
+  .hero-card-dip {
+    animation: none;
+    opacity: 1;
+  }
+}

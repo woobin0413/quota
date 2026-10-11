@@ -1,0 +1,66 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+.yarn/install-state.gz
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# local env files — ignore every .env variant (.env, .env.local,
+# .env.production, whatever `vercel env pull` writes), except the committed
+# template, which holds key names only and never values.
+.env*
+!.env.example
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+e2e/.auth/
+
+# playwright
+/test-results/
+/playwright-report/
+.playwright-mcp/
+
+# editors & local tooling
+*.swp
+.claude/
+
+# supabase local state
+supabase/.temp/
+supabase/.branches/
+public/newframes/
+quote-template.xlsx
+
+# Auth0 prod app secret (local only)
+.auth0-prod.local.json
+
+# Voice bench recordings — your voice, and possibly a real client's name
+# and address. Never commit these.
+bench/audio/*
+!bench/audio/.gitkeep
+bench/transcripts/*
+!bench/transcripts/sample/
+!bench/transcripts/.gitkeep

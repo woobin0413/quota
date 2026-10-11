@@ -1,0 +1,154 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - run: npm run type-check
+
+      - run: npm run lint
+
+      - run: npm run test
+
+      # Placeholder values only. The build never calls these services; they
+      # exist so modules that validate config at import time (Auth0, Stripe,
+      # NEXT_PUBLIC_* inlined into the client bundle) don't fail the build.
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
+          SUPABASE_SERVICE_ROLE_KEY: ci-placeholder
+          AUTH0_DOMAIN: example.us.auth0.com
+          AUTH0_CLIENT_ID: ci-placeholder
+          AUTH0_CLIENT_SECRET: ci-placeholder
+          AUTH0_SECRET: 0000000000000000000000000000000000000000000000000000000000000000
+          APP_BASE_URL: http://localhost:3000
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          STRIPE_SECRET_KEY: sk_test_ci_placeholder
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_ci_placeholder
+
+  # Playwright needs a real Supabase stack and a real Auth0 login, so it runs
+  # as its own job. It is skipped — not failed — when the Auth0 test-user
+  # secrets are absent, so forks and secret-less branches still get `verify`.
+  #
+  # Required repository secrets:
+  #   E2E_AUTH0_USER_EMAIL / E2E_AUTH0_USER_PASSWORD  a dedicated CI test user
+  #   AUTH0_DOMAIN / AUTH0_CLIENT_ID / AUTH0_CLIENT_SECRET / AUTH0_SECRET
+  # Emails never leave the runner: RESEND_MOCK=1 stubs every send.
+  e2e:
+    runs-on: ubuntu-latest
+    needs: verify
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: secrets
+        run: echo "present=${{ secrets.E2E_AUTH0_USER_EMAIL != '' }}" >> "$GITHUB_OUTPUT"
+
+      - if: steps.secrets.outputs.present != 'true'
+        run: echo "::notice::Auth0 e2e secrets not configured — skipping Playwright."
+
+      - uses: actions/setup-node@v4
+        if: steps.secrets.outputs.present == 'true'
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - if: steps.secrets.outputs.present == 'true'
+        run: npm ci
+
+      # The browser download is ~1 minute on every run otherwise. OS deps are
+      # not cached, so the install still runs — it is just a no-op for the
+      # browser itself when the cache hits.
+      - name: Cache Playwright browsers
+        if: steps.secrets.outputs.present == 'true'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - if: steps.secrets.outputs.present == 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Start Supabase
+        if: steps.secrets.outputs.present == 'true'
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - if: steps.secrets.outputs.present == 'true'
+        run: supabase start
+
+      # Applies supabase/migrations/ from scratch, so a migration that no
+      # longer applies cleanly fails here rather than on a deploy.
+      - if: steps.secrets.outputs.present == 'true'
+        run: supabase db reset --no-seed
+
+      # The stack mints its own keys — hand them to the app and the checks.
+      - name: Export Supabase credentials
+        if: steps.secrets.outputs.present == 'true'
+        run: |
+          supabase status -o env > /tmp/supabase.env
+          set -a && . /tmp/supabase.env && set +a
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$ANON_KEY"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
+          } >> "$GITHUB_ENV"
+
+      # The public anon key must not be able to read anything via PostgREST.
+      - name: Verify anon lockdown
+        if: steps.secrets.outputs.present == 'true'
+        run: bash scripts/verify-anon-lockdown.sh "$NEXT_PUBLIC_SUPABASE_URL" "$NEXT_PUBLIC_SUPABASE_ANON_KEY"
+
+      # Playwright serves this build via `next start` (see playwright.config.ts).
+      # NEXT_PUBLIC_* values are inlined into the client bundle at build time,
+      # so they have to be present here, not only at run time. The Supabase
+      # values come from GITHUB_ENV, written by the export step above.
+      - name: Build
+        if: steps.secrets.outputs.present == 'true'
+        run: npm run build
+        env:
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          APP_BASE_URL: http://localhost:3000
+          AUTH0_DOMAIN: ${{ secrets.AUTH0_DOMAIN }}
+          AUTH0_CLIENT_ID: ${{ secrets.AUTH0_CLIENT_ID }}
+          AUTH0_CLIENT_SECRET: ${{ secrets.AUTH0_CLIENT_SECRET }}
+          AUTH0_SECRET: ${{ secrets.AUTH0_SECRET }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+
+      - name: Run Playwright
+        if: steps.secrets.outputs.present == 'true'
+        run: npm run test:e2e
+        env:
+          RESEND_MOCK: '1'
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          APP_BASE_URL: http://localhost:3000
+          ALLOW_DEV_TIER_SWITCH: '1'
+          QUOTA_LOCAL_E2E: '1'
+          AUTH0_DOMAIN: ${{ secrets.AUTH0_DOMAIN }}
+          AUTH0_CLIENT_ID: ${{ secrets.AUTH0_CLIENT_ID }}
+          AUTH0_CLIENT_SECRET: ${{ secrets.AUTH0_CLIENT_SECRET }}
+          AUTH0_SECRET: ${{ secrets.AUTH0_SECRET }}
+          E2E_AUTH0_USER_EMAIL: ${{ secrets.E2E_AUTH0_USER_EMAIL }}
+          E2E_AUTH0_USER_PASSWORD: ${{ secrets.E2E_AUTH0_USER_PASSWORD }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+
+      # Authenticated traces/screenshots may contain session or personal data.
+      # Keep diagnostics in the runner; never upload them as repository artifacts.
