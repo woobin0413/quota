@@ -1,11 +1,50 @@
 # Quota
 
-A quoting and invoicing app for contractors: reusable price books, PDFs, email delivery and subscription billing.
+**A contractor’s price book, quotes and payment records in one place.**
 
-This repository is a curated showcase with a fresh Git history. Setup uses local environment files and synthetic fixtures.
+Build a quote from reusable work items, send it with a PDF invoice, and track payments without turning every job into paperwork.
 
+[See it in action](#see-it-in-action) · [Engineering highlights](#engineering-highlights) · [Run locally](#development) · [Security](SECURITY.md)
 
-Quoting & invoicing SaaS for contractors. Maintain a **work catalog** (your services with your prices), build quotes by selecting items, email them to clients as invoices (PDF attached), and track payment status manually — payments happen outside the system (cash, check, Zelle, etc.). Subscriptions are billed through Stripe; card fees are never taken from the contractor's own client payments.
+## See it in action
+
+### 1. See what needs attention
+
+![Quota dashboard showing three demo quotes, paid and unpaid status, and summary totals](docs/images/dashboard.png)
+
+The dashboard brings recent quotes, payment status and monthly plan usage together. All names, amounts and account details shown here are synthetic demo data.
+
+<details>
+<summary><strong>2. Keep a reusable price book</strong></summary>
+
+![Quota work catalog with electrical services and editable unit prices](docs/images/work-catalog.png)
+
+Add your services and prices once, or import a trade starter catalog. Reuse them on the next quote.
+
+</details>
+
+<details>
+<summary><strong>3. Build the quote from your catalog</strong></summary>
+
+![Quota quote builder with a demo client, catalog items, quantities and a calculated total](docs/images/quote-builder.png)
+
+Choose a client, add catalog items, adjust quantities and prices, then save. Saved quotes support PDF export, invoice emails and payment records.
+
+</details>
+
+**Workflow:** price book → quote → PDF / email → payment record.
+Client payments happen outside Quota; Stripe handles the contractor’s subscription.
+
+## Engineering highlights
+
+| Challenge | Approach | Explore |
+| --- | --- | --- |
+| Enforce monthly quote limits under concurrent requests | One database transaction creates the quote, dependent records and payment schedule | [Atomic migration](db/migrations/014_atomic_integrity_writes.sql) |
+| Keep billing correct when events arrive late | Read current Stripe state and apply it only if the database revision still matches | [Billing synchronization](lib/billing-state.ts) · [Ordering tests](lib/__tests__/billing-state.test.ts) |
+| Share request budgets across app instances | Service-only PostgreSQL counters with hashed identifiers | [Rate limiter](lib/rate-limit.ts) |
+| Make changes reviewable | Unit tests, type-check, lint, production build and synthetic browser checks | [CI](.github/workflows/ci.yml) · [Database regressions](scripts/security-db.test.py) |
+
+This is a curated source showcase. Setup requires your own local configuration; deployment prerequisites and remaining dependency limits are documented in [SECURITY.md](SECURITY.md).
 
 ## Tech Stack
 
