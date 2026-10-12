@@ -1,8 +1,21 @@
 # Quota
 
-**A contractor’s price book, quotes and payment records in one place.**
+**Less paperwork between explaining a job and sending a professional quote.**
 
-Build a quote from reusable work items, send it with a PDF invoice, and track payments without turning every job into paperwork.
+Quota helps contractors organize their services and prices, create clear quotes and PDF invoices, and keep track of payments. Its next step is voice-to-quote: record what a job needs in your own words, then review a customer-friendly draft instead of typing each item on a phone.
+
+## How AI would help
+
+Imagine saying, “Replace four outlets and allow six hours of labor.” The planned workflow would:
+
+1. Convert the recording into text.
+2. Use AI to identify the work, quantities and customer mentioned in those notes.
+3. Match the work to your saved price book and prepare an editable quote draft.
+4. Let you check the customer, wording, quantities and prices before saving, exporting or emailing it.
+
+Prices would come from your own catalog or your edits. You would approve the draft before it becomes a saved quote or invoice.
+
+**Status:** voice capture and AI drafting are planned in the [voice-to-invoice design](docs/superpowers/specs/2026-08-08-voice-to-invoice-design.md). The current app supports catalog-based quoting, PDF invoices, email and payment records; the screenshots below show that existing workflow.
 
 [See it in action](#see-it-in-action) · [Engineering highlights](#engineering-highlights) · [Run locally](#development) · [Security](SECURITY.md)
 
